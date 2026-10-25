@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WeatherPulse - Real-Time Weather Forecast & 7-Day Outlook</title>
+  <meta name="description" content="Stunning real-time weather forecast application with live search autocomplete, GPS geolocation, 7-day extended forecast, 24-hour hourly breakdown, and comprehensive atmospheric metrics.">
+  <meta name="keywords" content="weather, forecast, 7 day weather, temperature, rain chance, live weather app, atmospheric pressure, UV index, air quality">
+  <meta name="theme-color" content="#090e17">
+
+  <!-- Open Graph / Meta -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="WeatherPulse - Modern Weather App">
+  <meta property="og:description" content="Accurate global weather forecasts with 7-day outlook, hourly trends, and interactive atmospheric metrics.">
+
+  <!-- Favicon SVG -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2338bdf8'><circle cx='12' cy='12' r='5'/><path d='M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42'/></svg>">
+
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-clear-day">
+  <!-- Dynamic Atmospheric Background Canvas -->
+  <canvas id="weather-canvas"></canvas>
+
+  <div class="app-container">
+    <!-- Top Navigation & Search Header -->
+    <header class="app-header" id="app-header">
+      <!-- Brand Logo -->
+      <a href="#" class="brand" id="brand-logo" aria-label="WeatherPulse Home">
+        <div class="brand-icon-wrapper" id="brand-icon">
+          <!-- Populated by JS icon -->
+        </div>
+        <div class="brand-text">
+          <h1 class="brand-name">WeatherPulse</h1>
+        </div>
+        <span class="brand-badge">PRO</span>
+      </a>
+
+      <!-- Search Bar with Live Typeahead Autocomplete -->
+      <div class="search-wrapper" id="search-wrapper">
+        <div class="search-bar" id="search-bar">
+          <span class="search-icon" id="search-icon-slot"></span>
+          <input 
+            type="text" 
+            id="city-search-input" 
+            class="search-input" 
+            placeholder="Search city, state or country..." 
+            autocomplete="off" 
+            spellcheck="false"
+            aria-label="Search city or location"
+          >
+          <span class="search-shortcut" title="Press / to search">/</span>
+          <button type="button" id="search-clear-btn" class="search-clear-btn" aria-label="Clear search input">
+            &times;
+          </button>
+        </div>
+
+        <!-- Autocomplete Suggestions Dropdown -->
+        <ul id="search-dropdown" class="search-dropdown" role="listbox" aria-label="City suggestions"></ul>
+      </div>
+
+      <!-- Action Controls (GPS, Units, Saved Cities, Particles, Refresh) -->
+      <div class="header-actions" id="header-actions">
+        <!-- Geolocation Button -->
+        <button type="button" id="geo-location-btn" class="icon-btn" data-tooltip="Use Current Location" aria-label="Use Current Location">
+          <span id="geo-icon-slot"></span>
+        </button>
+
+        <!-- Bookmark Current City -->
+        <button type="button" id="favorite-toggle-btn" class="icon-btn favorite-btn" data-tooltip="Save to Favorites" aria-label="Save to Favorites">
+          <span id="star-icon-slot"></span>
+        </button>
+
+        <!-- Temperature Unit Toggle (°C / °F) -->
+        <div class="unit-switcher" id="unit-switcher" role="radiogroup" aria-label="Temperature unit selection">
+          <button type="button" id="unit-celsius" class="unit-btn active" role="radio" aria-checked="true">°C</button>
+          <button type="button" id="unit-fahrenheit" class="unit-btn" role="radio" aria-checked="false">°F</button>
+        </div>
+
+        <!-- Canvas Particles Toggle -->
+        <button type="button" id="particles-toggle-btn" class="icon-btn active" data-tooltip="Toggle Particle Effects" aria-label="Toggle dynamic particle animations">
+          <span id="sparkles-icon-slot"></span>
+        </button>
+
+        <!-- Refresh Data Button -->
+        <button type="button" id="refresh-data-btn" class="icon-btn" data-tooltip="Refresh Weather" aria-label="Refresh current weather data">
+          <span id="refresh-icon-slot"></span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Quick Cities Ribbon (Popular & Saved Cities) -->
+    <nav class="quick-cities-ribbon" id="quick-cities-ribbon" aria-label="Quick city selection">
+      <span class="quick-city-label">
+        <span id="pin-icon-slot"></span> Quick Cities:
+      </span>
+      <div id="quick-cities-list" style="display: flex; gap: 8px;"></div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main id="weather-main-content">
+      <!-- 1. Hero Current Weather Card -->
+      <section class="weather-hero-card" id="weather-hero-card" aria-label="Current Weather Conditions">
+        <div class="hero-left">
+          <div class="location-meta">
+            <div class="location-row">
+              <h2 class="location-title" id="location-name">London</h2>
+              <span class="location-country" id="location-country">GB</span>
+            </div>
+            <div class="date-time-row">
+              <span id="current-date">Saturday, October 24</span>
+              <span class="date-time-dot"></span>
+              <span id="current-time">14:15 Local Time</span>
+            </div>
+          </div>
+
+          <!-- Large Temperature Group -->
+          <div class="temp-display-group">
+            <span class="current-temp" id="current-temp">22</span>
+            <span class="temp-unit-symbol" id="temp-unit-symbol">°C</span>
+            
+            <div class="temp-sub-details">
+              <div class="feels-like">
+                Feels like <span id="feels-like-temp">24°</span>
+              </div>
+              <div class="high-low-badge" id="high-low-badge">
+                <span class="high-temp">↑ <strong id="hero-high-temp">25°</strong></span>
+                <span class="low-temp">↓ <strong id="hero-low-temp">16°</strong></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Condition & AI Recommendation Ribbon -->
+          <div class="condition-ribbon">
+            <div class="condition-badge" id="condition-badge">
+              <span id="condition-text">Partly Cloudy</span>
+            </div>
+            <div class="summary-pill" id="weather-summary-pill">
+              <span id="leaf-icon-slot"></span>
+              <span id="weather-advice-text">Perfect conditions for outdoor activities today.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hero Right Illustration -->
+        <div class="hero-right">
+          <div class="hero-icon-container" id="hero-weather-icon">
+            <!-- Populated dynamically with high-res animated SVG -->
+          </div>
+          <div class="hero-quick-stats">
+            <div class="hero-quick-stat" id="hero-stat-wind">
+              <span>💨 Wind:</span>
+              <strong id="hero-wind-speed">14 km/h</strong>
+            </div>
+            <div class="hero-quick-stat" id="hero-stat-humidity">
+              <span>💧 Humidity:</span>
+              <strong id="hero-humidity">58%</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. 24-Hour Hourly Forecast Carousel -->
+      <section class="section-block" id="hourly-forecast-section" aria-label="Hourly 24-Hour Forecast" style="margin-top: 28px;">
+        <div class="section-header">
+          <h3 class="section-title">
+            <span class="section-title-icon" id="hourly-title-icon"></span>
+            24-Hour Hourly Forecast
+          </h3>
+          <span style="font-size: 0.82rem; color: var(--text-muted);">Swipe or scroll horizontally</span>
+        </div>
+
+        <div class="hourly-track-container">
+          <div class="hourly-track" id="hourly-track" role="region" aria-label="Hourly timeline">
+            <!-- Hourly cards generated via JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. Split Grid: 7-Day Forecast + Detailed Metrics -->
+      <div class="main-weather-grid" style="margin-top: 28px;">
+        
+        <!-- Left: Next 7 Days Forecast -->
+        <section class="daily-forecast-container" id="daily-forecast-container" aria-label="7-Day Extended Forecast">
+          <div class="section-header">
+            <h3 class="section-title">
+              <span class="section-title-icon" id="daily-title-icon"></span>
+              Next 7 Days Forecast
+            </h3>
+            <span style="font-size: 0.8rem; color: var(--text-muted);">Click day for details</span>
+          </div>
+
+          <ul class="daily-forecast-list" id="daily-forecast-list">
+            <!-- 7 Days populated dynamically -->
+          </ul>
+        </section>
+
+        <!-- Right: Comprehensive Weather Metrics (Grid) -->
+        <section class="metrics-container" id="metrics-container" aria-label="Atmospheric Metrics and Weather Details">
+          <div class="section-header">
+            <h3 class="section-title">
+              <span class="section-title-icon" id="metrics-title-icon"></span>
+              Current Weather Details & Atmospheric Metrics
+            </h3>
+          </div>
+
+          <div class="metrics-grid" id="metrics-grid">
+            
+            <!-- 1. Wind & Gusts Card with Compass -->
+            <article class="metric-card" id="card-wind">
+              <div class="metric-card-header">
+                <div class="metric-title-group">
+                  <span class="metric-icon" id="icon-metric-wind"></span>
+                  <span class="metric-label">Wind & Gusts</span>
+                </div>
+                <span class="metric-badge" id="wind-scale-badge" style="background: rgba(56, 189, 248, 0.15); color: var(--accent-cyan);">Moderate</span>
+              </div>
+              <div class="metric-body">
+                <div class="compass-dial-container">
+                  <div class="metric-val-main">
+                    <span id="metric-wind-speed">15.8</span>
+                    <span class="metric-unit" id="metric-wind-unit">km/h</span>
+                  </div>
+                  <div class="compass-visual" title="Wind Direction">
+                    <span class="compass-marker-n">N</span>
+                    <span class="compass-marker-s">S</span>
+                    <div class="compass-needle" id="compass-needle"></div>
+                  </div>
+                </div>
+                <p class="metric-desc" id="metric-wind-desc">Direction: <strong>198° SSW</strong> · Gusts up to <strong id="metric-wind-gusts">24 km/h</strong></p>
+              </div>
+            </article>
+
+            <!-- 2. Humidity & Dew Point Card -->
+            <article class="metric-card" id="card-humidity">
+              <div class="metric-card-header">
+                <div class="metric-title-group">
+                  <span class="metric-icon" id="icon-metric-humidity"></span>
+                  <span class="metric-label">Humidity</span>
+                </div>
+                <span class="metric-badge" id="humidity-badge" style="background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald);">Comfortable</span>
+              </div>
+              <div class="metric-body">
+                <div class="metric-val-main">
+                  <span id="metric-humidity">64</span>
+                  <span class="metric-unit">%</span>
+                </div>
+                <div class="progress-bar-track">
+                  <div class="progress-bar-fill fill-humidity" id="humidity-progress" style="width: 64%;"></div>
+                </div>
+                <p class="metric-desc" id="metric-humidity-desc">The dew point is <strong id="metric-dew-point">12°C</strong> right now.</p>
+              </div>
+            </article>
+
+            <!-- 3. UV Index Card -->
+            <article class="metric-card" id="card-uv">
+              <div class="metric-card-header">
+                <div class="metric-title-group">
+                  <span class="metric-icon" id="icon-metric-uv"></span>
+                  <span class="metric-label">UV Index</span>
+                </div>
+                <span class="metric-badge" id="uv-badge" style="background: rgba(251, 191, 36, 0.15); color: var(--accent-gold);">Moderate</span>
+              </div>
+              <div class="metric-body">
+                <div class="metric-val-main">
+                  <span id="metric-uv">3.8</span>
+                  <span class="metric-unit">/ 11</span>
+                </div>
+                <div class="progress-bar-track">
+                  <div class="progress-bar-fill fill-uv" id="uv-progress" style="width: 35%;"></div>
+                </div>
+                <p class="metric-desc" id="metric-uv-desc">Wear sunglasses on bright days. Protection suggested during midday.</p>
+              </div>
+            </article>
+
+            <!-- 4. Air Quality Index (AQI) Card -->
+            <article class="metric-card" id="card-aqi">
+              <div class="metric-card-header">
+                <div class="metric-title-group">
+                  <span class="metric-icon" id="icon-metric-aqi"></span>
+                  <span class="metric-label">Air Quality</span>
+                </div>
+                <span class="metric-badge" id="aqi-badge" style="background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald);">Good</span>
+              </div>
+              <div class="metric-body">
+                <div class="metric-val-main">
+                  <span id="metric-aqi">28</span>
+                  <span class="metric-unit">AQI</span>
+                </div>
+                <div class="progress-bar-track">
+                  <div class="progress-bar-fill fill-aqi" id="aqi-progress" style="width: 28%;"></div>
+                </div>
+                <p class="metric-desc" id="metric-aqi-desc">PM2.5: <strong id="metric-pm25">8.4 µg/m³</strong> · PM10: <strong id="metric-pm10">14.2 µg/m³</strong></p>
+              </div>
+            </article>
+
+            <!-- 5. Sun Cycle & Daylight Card -->
+            <article class="metric-card" id="card-sun">
+              <div class="metric-card-header">
+                <div class="metric-title-group">
+                  <span class="metric-icon" id="icon-metric-sun"></span>
+                  <span class="metric-label">Sunrise & Sunset</span>
+                </div>
+                <span class="metric-badge" id="sun-status-badge" style="background: rgba(251, 191, 36, 0.15); color: var(--accent-gold);">Daylight</span>
+              </div>
+              <div class="metric-body">
+                <div class="sun-arc-container">
+                  <div class="sun-arc-visual">
+                    <svg class="sun-arc-svg" viewBox="0 0 200 60" preserveAspectRatio="none">
+                      <!-- Horizon Line -->
+                      <line x1="10" y1="52" x2="190" y2="52" stroke="rgba(255, 255, 255, 0.15)" stroke-width="2" />
+                      <!-- Solar Path Arc -->
+                      <path d="M 15 52 A 85 45 0 0 1 185 52" fill="none" stroke="rgba(255, 255, 255, 0.15)" stroke-width="2" stroke-dasharray="4 4" />
+                      <path id="sun-arc-fill" d="M 15 52 A 85 45 0 0 1 100 7" fill="none" stroke="#fbbf24" stroke-width="2.5" />
+                      <!-- Sun Indicator Circle -->
+                      <circle id="sun-indicator-dot" cx="100" cy="7" r="5" fill="#f59e0b" filter="drop-shadow(0 0 4px #fbbf24)" />
+                    </svg>
+                  </div>
+                  <div class="sun-times-row">
+                    <div class="sun-time-block">
+                      <span class="sun-time-label">Sunrise</span>
+                      <span class="sun-time-val" id="metric-sunrise">06:42 AM</span>
+                    </div>
+                    <div class="sun-time-block" style="text-align: right;">
+                      <span class="sun-time-label">Sunset</span>
+                      <span class="sun-time-val" id="metric-sunset">06:14 PM</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <!-- 6. Atmospheric Pressure Card -->
+            <article class="metric-card" id="card-pressure">
+              <div class="metric-card-header">
+                <div class="metric-title-group">
+                  <span class="metric-icon" id="icon-metric-pressure"></span>
+                  <span class="metric-label">Pressure</span>
+                </div>
+                <span class="metric-badge" id="pressure-badge" style="background: rgba(56, 189, 248, 0.15); color: var(--accent-cyan);">Normal</span>
+              </div>
+              <div class="metric-body">
+                <div class="metric-val-main">
+                  <span id="metric-pressure">1014</span>
+                  <span class="metric-unit">hPa</span>
+                </div>
+                <p class="metric-desc" id="metric-pressure-desc">Barometric reading is stable. Expect steady weather conditions.</p>
+              </div>
+            </article>
+
+            <!-- 7. Precipitation & Rain Card -->
+            <article class="metric-card" id="card-precipitation">
+              <div class="metric-card-header">
+                <div class="metric-title-group">
+                  <span class="metric-icon" id="icon-metric-precip"></span>
+                  <span class="metric-label">Precipitation</span>
+                </div>
+                <span class="metric-badge" id="precip-badge" style="background: rgba(56, 189, 248, 0.15); color: var(--accent-cyan);">Rain Chance</span>
+              </div>
+              <div class="metric-body">
+                <div class="metric-val-main">
+                  <span id="metric-precipitation">0.4</span>
+                  <span class="metric-unit">mm</span>
+                </div>
+                <p class="metric-desc" id="metric-precip-desc">Today's rain probability: <strong id="metric-precip-chance">45%</strong>.</p>
+              </div>
+            </article>
+
+            <!-- 8. Cloud Cover & Visibility Card -->
+            <article class="metric-card" id="card-clouds">
+              <div class="metric-card-header">
+                <div class="metric-title-group">
+                  <span class="metric-icon" id="icon-metric-cloud"></span>
+                  <span class="metric-label">Cloud Cover & Visibility</span>
+                </div>
+                <span class="metric-badge" id="clouds-badge" style="background: rgba(148, 163, 184, 0.15); color: var(--text-secondary);">Scattered</span>
+              </div>
+              <div class="metric-body">
+                <div class="metric-val-main">
+                  <span id="metric-cloud-cover">42</span>
+                  <span class="metric-unit">%</span>
+                </div>
+                <p class="metric-desc" id="metric-visibility-desc">Visibility: <strong id="metric-visibility">10+ km</strong> · Horizon is sharp and clear.</p>
+              </div>
+            </article>
+
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- App Footer -->
+    <footer class="app-footer" id="app-footer">
+      <span>WeatherPulse &copy; 2026. Powered by Open-Meteo API.</span>
+      <span>•</span>
+      <span>Live atmospheric data, high precision WMO telemetry.</span>
+    </footer>
+  </div>
+
+  <!-- Notification Toast Popup -->
+  <div id="toast" class="toast" role="alert" aria-live="polite"></div>
+
+  <!-- Location Permission Modal Popup -->
+  <div id="location-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-card">
+      <button type="button" id="modal-close-x" class="modal-close-x" aria-label="Close modal">&times;</button>
+      <div class="modal-icon-glow">
+        <span id="modal-location-icon"></span>
+      </div>
+      <h2 id="modal-title" class="modal-title">Enable Local Weather</h2>
+      <p class="modal-desc">
+        WeatherPulse uses your location to show live weather, next 24-hour trends, and a 7-day forecast tailored directly to where you are.
+      </p>
+      <div class="modal-actions">
+        <button type="button" id="modal-allow-btn" class="modal-btn modal-btn-primary">
+          <span id="modal-btn-icon"></span>
+          <span>Detect My Location</span>
+        </button>
+        <button type="button" id="modal-dismiss-btn" class="modal-btn modal-btn-secondary">
+          Maybe Later
+        </button>
+      </div>
+      <p class="modal-footnote">🔒 Your location is only processed in your browser and never shared.</p>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="icons.js"></script>
+  <script src="canvas-weather.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
